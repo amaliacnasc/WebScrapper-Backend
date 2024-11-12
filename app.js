@@ -7,11 +7,17 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Verifica se a senha do e-mail está definida no ambiente
+const SENHA = process.env.SENHA;
+if (!SENHA) {
+  console.error("Erro: a variável de ambiente 'SENHA' não está definida.");
+  process.exit(1);
+}
+
 app.use(cors());
 app.use(express.json()); // Permite ler JSON no corpo das requisições
 
 const URL = 'https://www.folhape.com.br/economia/';
-const SENHA = process.env.senha
 
 async function getNews() {
   try {
@@ -23,13 +29,20 @@ async function getNews() {
       if (index < 5) {
         const title = $(element).find('a').attr('title');
         const titleURL = $(element).find('a').attr('href');
-        articles.push({ title, titleURL });
+        if (title && titleURL) {
+          articles.push({ title, titleURL });
+        }
       }
     });
 
+    if (articles.length === 0) {
+      throw new Error("Nenhuma notícia encontrada na página.");
+    }
+
     return articles;
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao obter as notícias:", error.message);
+    throw new Error("Erro ao obter as notícias.");
   }
 }
 
@@ -38,13 +51,13 @@ async function sendEmail(recipientEmail, newsList) {
     service: 'gmail',
     auth: {
       user: 'economianoticias4@gmail.com',
-      pass: SENHA   
+      pass: SENHA
     }
   });
 
-  let emailContent = 'Aqui estão as últimas notícias:\n\n';
+  let emailContent = 'Aqui estão as últimas notícias de economia:\n\n';
   newsList.forEach((news, index) => {
-    emailContent += `${index + 1}. ${news.title}\nLink: ${news.titleURL}\n\n`;
+    emailContent += `${index + 1}. ${news.title}\nLink: https://www.folhape.com.br${news.titleURL}\n\n`;
   });
 
   const mailOptions = {
@@ -54,7 +67,12 @@ async function sendEmail(recipientEmail, newsList) {
     text: emailContent
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Erro ao enviar o e-mail:", error.message);
+    throw new Error("Erro ao enviar o e-mail.");
+  }
 }
 
 // Rota para receber o email e enviar as notícias
@@ -70,7 +88,7 @@ app.post('/send-news', async (req, res) => {
     res.status(200).json({ message: 'Notícias enviadas com sucesso!' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Erro ao enviar email' });
+    res.status(500).json({ error: error.message });
   }
 });
 
