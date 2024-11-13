@@ -53,7 +53,10 @@ async function sendEmail(recipientEmail, newsList) {
       user: 'economianoticias4@gmail.com',
       pass: SENHA
     }
-  });
+    
+  }
+);
+console.log('chegou no send email')
 
   let emailContent = 'Aqui estão as últimas notícias de economia:\n\n';
   newsList.forEach((news, index) => {
@@ -64,11 +67,14 @@ async function sendEmail(recipientEmail, newsList) {
     from: 'economianoticias4@gmail.com',
     to: recipientEmail,
     subject: 'Top 5 Notícias de Economia',
-    text: emailContent
+    text: emailContent,
+    
   };
+  console.log('mail options')
 
   try {
     await transporter.sendMail(mailOptions);
+    console.log('chegou no transporter')
   } catch (error) {
     console.error("Erro ao enviar o e-mail:", error.message);
     throw new Error("Erro ao enviar o e-mail.");
